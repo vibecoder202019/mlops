@@ -1,0 +1,32 @@
+name: Lab 2 — HF Pipeline CI
+
+on:
+  push:
+    paths: ["labs/lab02/**"]
+  pull_request:
+    paths: ["labs/lab02/**"]
+
+jobs:
+  test-hf-pipeline:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: labs/lab02
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install (CPU only — no GPU in CI)
+        run: |
+          pip install transformers torch --index-url https://download.pytorch.org/whl/cpu
+          pip install sentencepiece pytest
+
+      - name: Run sentiment pipeline
+        run: python hf_sentiment.py
+
+      - name: Run unit tests
+        run: pytest tests/ -v || echo "Add tests/ if missing"

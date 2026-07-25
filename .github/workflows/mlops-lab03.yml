@@ -1,0 +1,95 @@
+name: Lab 3+4 — MLOps Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths: ["labs/lab03/**", ".github/workflows/mlops-lab03.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["labs/lab03/**"]
+
+env:
+  APP_DIR: labs/lab03
+  ECR_REPOSITORY: housing-price-api
+  MIN_R2_SCORE: "0.75"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt ruff pytest
+      - run: ruff check src/ tests/ || true
+      - run: pytest tests/ -v
+
+  train-and-validate:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: pip install -r requirements.txt "dvc[s3]"
+      - run: dvc pull --force
+      - run: python src/validate_data.py
+      - run: dvc repro --force
+        env:
+          MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI }}
+      - run: bash ../../scripts/quality-gate.sh metrics.json ${{ env.MIN_R2_SCORE }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: training-metrics
+          path: ${{ env.APP_DIR }}/metrics.json
+
+  build-and-deploy-staging:
+    needs: train-and-validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-kubectl
+        with:
+          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          region: ${{ vars.AWS_REGION }}
+          cluster-name: ${{ vars.EKS_CLUSTER_NAME }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - working-directory: ${{ env.APP_DIR }}
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ github.sha }}
+        run: |
+          pip install -r requirements.txt "dvc[s3]"
+          dvc pull --force && dvc repro --force
+          docker build -t $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG .
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG
+      - run: |
+          kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
+          helm upgrade --install housing-api ./labs/lab03/helm/housing-api \
+            --namespace staging \
+            --set image.repository=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }} \
+            --set image.tag=${{ github.sha }} \
+            --wait --timeout 5m
+      - run: bash scripts/smoke-test.sh staging housing-api 8000 /health

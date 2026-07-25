@@ -1,0 +1,2 @@
+# Place documents for RAG ingestion pipeline (.txt, .md)
+# CI/CD: push here triggers rag-ingest.yml

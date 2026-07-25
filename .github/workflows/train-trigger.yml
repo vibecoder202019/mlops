@@ -1,0 +1,91 @@
+name: Lab 10 — Trigger LoRA Training
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset_size:
+        description: "Number of training samples"
+        default: "500"
+      lora_r:
+        default: "16"
+      epochs:
+        default: "1"
+  push:
+    branches: [main]
+    paths:
+      - "labs/lab10/src/**"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check labs/lab10/src/
+
+  build-trainer-image:
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image_uri: ${{ steps.out.outputs.image_uri }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - id: out
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ github.sha }}
+        run: |
+          IMAGE=$REGISTRY/finetune-trainer:$TAG
+          docker build -t $IMAGE -f labs/lab10/Dockerfile labs/lab10/
+          docker push $IMAGE
+          echo "image_uri=$IMAGE" >> $GITHUB_OUTPUT
+
+  launch-training-job:
+    needs: build-trainer-image
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Ensure GPU nodes
+        run: |
+          eksctl scale nodegroup --cluster ${{ vars.EKS_CLUSTER_NAME }} \
+            --name llm-gpu --nodes 1 --nodes-min 1 2>/dev/null || true
+
+      - name: Submit training Job
+        env:
+          IMAGE: ${{ needs.build-trainer-image.outputs.image_uri }}
+          DATASET_SIZE: ${{ inputs.dataset_size }}
+          LORA_R: ${{ inputs.lora_r }}
+          EPOCHS: ${{ inputs.epochs }}
+        run: |
+          export IMAGE DATASET_SIZE LORA_R EPOCHS
+          envsubst < labs/lab10/k8s/training-job.yaml | kubectl apply -n staging -f -
+          JOB_NAME=$(kubectl get jobs -n staging --sort-by=.metadata.creationTimestamp -o name | tail -1)
+          kubectl wait --for=condition=complete $JOB_NAME -n staging --timeout=3600s
+
+      - name: Register model to MLflow (post-training)
+        run: |
+          kubectl logs -n staging -l job-name=lora-training --tail=100
+          echo "Check MLflow UI for registered adapter"

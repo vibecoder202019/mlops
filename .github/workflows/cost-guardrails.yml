@@ -1,0 +1,77 @@
+name: Lab 7 — Cost Guardrails
+
+on:
+  push:
+    paths:
+      - "labs/lab07/**"
+      - "terraform/**"
+  schedule:
+    - cron: "0 1 * * *"   # Daily 08:00 ICT — check cost
+  workflow_dispatch:
+
+jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt & validate
+        working-directory: labs/lab07/terraform
+        run: |
+          terraform fmt -check
+          terraform init -backend=false
+          terraform validate
+
+  cost-check:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Check running GPU instances
+        run: |
+          chmod +x scripts/cost-check.sh
+          scripts/cost-check.sh
+
+      - name: Apply S3 lifecycle (on main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          aws s3api put-bucket-lifecycle-configuration \
+            --bucket ${{ vars.S3_BUCKET }} \
+            --lifecycle-configuration file://labs/lab07/s3-lifecycle.json
+
+  shutdown-idle-gpu:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+      - name: Scale GPU nodegroup to 0 if idle
+        run: |
+          # Nếu không có pod dùng GPU → scale nodegroup về 0
+          GPU_PODS=$(kubectl get pods -A -o json | python3 -c "
+          import json,sys
+          pods=json.load(sys.stdin)['items']
+          print(sum(1 for p in pods if any('nvidia.com/gpu' in str(c.get('resources',{}).get('limits',{})) for c in p.get('spec',{}).get('containers',[]))))
+          ")
+          echo "GPU pods running: $GPU_PODS"
+          if [ "$GPU_PODS" -eq 0 ]; then
+            echo "No GPU workloads — consider scaling down GPU nodegroup"
+            # eksctl scale nodegroup --cluster=... --name=gpu-spot --nodes=0
+          fi

@@ -1,0 +1,87 @@
+name: Lab 9 — Deploy RAG Platform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "labs/lab09/**"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint labs/lab09/helm/rag-platform
+
+  build-images:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        service: [embedding-service, rag-api, ingestion]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - name: Build ${{ matrix.service }}
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/${{ matrix.service }}:$TAG \
+            -f labs/lab09/docker/${{ matrix.service }}.Dockerfile labs/lab09/
+          docker push $REGISTRY/${{ matrix.service }}:$TAG
+
+  deploy:
+    needs: [lint, build-images]
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Deploy Qdrant
+        run: |
+          helm repo add qdrant https://qdrant.to/helm
+          helm upgrade --install qdrant qdrant/qdrant \
+            --namespace staging --create-namespace \
+            -f labs/lab09/helm/qdrant-values.yaml
+
+      - name: Deploy RAG platform
+        env:
+          REGISTRY: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+          TAG: ${{ github.sha }}
+        run: |
+          helm upgrade --install rag-platform ./labs/lab09/helm/rag-platform \
+            --namespace staging \
+            --set embedding.image.repository=$REGISTRY/embedding-service \
+            --set ragApi.image.repository=$REGISTRY/rag-api \
+            --set ingestion.image.repository=$REGISTRY/ingestion \
+            --set image.tag=$TAG \
+            --set vllm.enabled=true \
+            --wait --timeout 15m
+
+      - name: RAG end-to-end smoke test
+        run: |
+          kubectl wait --for=condition=ready pod -l app=rag-api -n staging --timeout=300s
+          kubectl run rag-smoke-$(date +%s) -n staging \
+            --image=curlimages/curl --restart=Never --rm -i \
+            --command -- curl -sf http://rag-api:8080/health

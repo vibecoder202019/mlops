@@ -1,0 +1,60 @@
+name: Lab 6 — Upload KFP Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "labs/lab06/pipeline/**"
+  workflow_dispatch:
+
+jobs:
+  compile-and-upload:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install KFP SDK
+        run: pip install "kfp==2.9.0" pyyaml
+
+      - name: Compile pipeline
+        working-directory: labs/lab06
+        run: python pipeline/housing_pipeline.py
+        # Output: housing_pipeline.yaml
+
+      - name: Configure AWS & kubeconfig
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Port-forward ML Pipeline API & upload
+        working-directory: labs/lab06
+        run: |
+          kubectl port-forward -n kubeflow svc/ml-pipeline 8888:8888 &
+          sleep 5
+
+          python - <<'EOF'
+          import kfp
+          client = kfp.Client(host="http://localhost:8888")
+          pipeline = client.upload_pipeline(
+              pipeline_package_path="housing_pipeline.yaml",
+              pipeline_name="housing-training-pipeline",
+              description="Uploaded by GitHub Actions",
+          )
+          print(f"Pipeline ID: {pipeline.pipeline_id}")
+          EOF
+
+      - name: Upload compiled YAML as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kfp-pipeline-yaml
+          path: labs/lab06/housing_pipeline.yaml

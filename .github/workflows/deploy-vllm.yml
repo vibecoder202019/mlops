@@ -1,0 +1,103 @@
+name: Lab 8 — Deploy vLLM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "labs/lab08/**"
+  workflow_dispatch:
+    inputs:
+      model_name:
+        default: "meta-llama/Llama-3.2-1B-Instruct"
+      environment:
+        default: staging
+
+env:
+  ECR_REPOSITORY: vllm-server
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image_uri: ${{ steps.push.outputs.image_uri }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Build vLLM image (upstream + config)
+        id: push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ github.sha }}
+        run: |
+          # Option A: dùng upstream image, chỉ tag lại
+          IMAGE=$REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG
+          docker pull vllm/vllm-openai:latest
+          docker tag vllm/vllm-openai:latest $IMAGE
+          docker push $IMAGE
+          echo "image_uri=$IMAGE" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Ensure GPU nodegroup exists
+        run: |
+          eksctl get nodegroup --cluster ${{ vars.EKS_CLUSTER_NAME }} -n llm-gpu 2>/dev/null || \
+          eksctl create nodegroup \
+            --cluster ${{ vars.EKS_CLUSTER_NAME }} \
+            --name llm-gpu \
+            --node-type g5.xlarge \
+            --nodes 1 --nodes-min 0 --nodes-max 1 \
+            --spot \
+            --node-taints nvidia.com/gpu=true:NoSchedule \
+            --node-labels workload=gpu
+
+      - name: Install NVIDIA device plugin
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.5/nvidia-device-plugin.yml
+
+      - name: Deploy vLLM
+        env:
+          NAMESPACE: ${{ inputs.environment || 'staging' }}
+          MODEL: ${{ inputs.model_name || 'meta-llama/Llama-3.2-1B-Instruct' }}
+          IMAGE: ${{ needs.build.outputs.image_uri }}
+        run: |
+          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+          helm upgrade --install vllm ./labs/lab08/helm/vllm \
+            --namespace $NAMESPACE \
+            --set image.repository=${IMAGE%:*} \
+            --set image.tag=${IMAGE##*:} \
+            --set model.name=$MODEL \
+            --set resources.gpu=1 \
+            --wait --timeout 15m
+
+      - name: LLM smoke test
+        env:
+          NAMESPACE: ${{ inputs.environment || 'staging' }}
+        run: |
+          chmod +x scripts/llm-smoke-test.sh
+          scripts/llm-smoke-test.sh $NAMESPACE vllm 8000

@@ -1,0 +1,31 @@
+name: KServe Canary Promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      canary_percent:
+        type: choice
+        options: ["10", "50", "100"]
+        default: "10"
+      environment:
+        default: staging
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+      - run: |
+          helm upgrade iris-kserve ./labs/lab05/helm/iris-kserve \
+            --namespace ${{ inputs.environment }} \
+            --reuse-values \
+            --set predictor.canaryTrafficPercent=${{ inputs.canary_percent }}

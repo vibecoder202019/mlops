@@ -1,0 +1,95 @@
+name: Lab 5 — Deploy KServe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "labs/lab05/**"
+      - ".github/workflows/deploy-kserve.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+      canary_percent:
+        description: "Canary traffic percent (0-100)"
+        required: false
+        default: "0"
+        type: string
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate manifests
+        run: |
+          kubeconform -summary labs/lab05/k8s/
+          helm lint labs/lab05/helm/iris-kserve || true
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Ensure KServe installed
+        run: |
+          kubectl get namespace kserve 2>/dev/null || kubectl apply -f https://github.com/kserve/kserve/releases/download/v0.14.0/kserve.yaml
+          kubectl apply -f https://github.com/kserve/kserve/releases/download/v0.14.0/kserve-cluster-resources.yaml
+          kubectl wait --for=condition=ready pod -l control-plane=kserve-controller-manager -n kserve --timeout=300s
+
+      - name: Sync model to S3 (if retrained)
+        run: |
+          aws s3 sync labs/lab05/models/ s3://${{ vars.S3_BUCKET }}/models/iris/latest/ || true
+
+      - name: Deploy InferenceService
+        env:
+          NAMESPACE: ${{ inputs.environment || 'staging' }}
+          CANARY: ${{ inputs.canary_percent || '0' }}
+          S3_URI: s3://${{ vars.S3_BUCKET }}/models/iris/latest
+        run: |
+          kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+          helm upgrade --install iris-kserve ./labs/lab05/helm/iris-kserve \
+            --namespace $NAMESPACE \
+            --set predictor.model.storageUri=$S3_URI \
+            --set predictor.canaryTrafficPercent=$CANARY \
+            --wait --timeout 10m
+
+      - name: Wait for InferenceService Ready
+        env:
+          NAMESPACE: ${{ inputs.environment || 'staging' }}
+        run: |
+          kubectl wait --for=condition=Ready inferenceservice/iris-sklearn \
+            -n $NAMESPACE --timeout=600s
+
+      - name: Inference smoke test
+        env:
+          NAMESPACE: ${{ inputs.environment || 'staging' }}
+        run: |
+          # Port-forward và test (hoặc dùng in-cluster curl)
+          kubectl run kserve-smoke-$(date +%s) -n $NAMESPACE \
+            --image=curlimages/curl --restart=Never --rm -i \
+            --command -- curl -sf http://iris-sklearn-predictor.$NAMESPACE.svc.cluster.local/v1/models/iris:predict \
+            -H "Content-Type: application/json" \
+            -d '{"instances": [[5.1, 3.5, 1.4, 0.2]]}' || echo "Adjust URL for your KServe setup"

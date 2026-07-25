@@ -1,0 +1,31 @@
+name: Trigger RAG Document Ingestion
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "labs/lab09/documents/**"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync documents to S3
+        run: aws s3 sync labs/lab09/documents/ s3://${{ vars.S3_BUCKET }}/documents/
+
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Submit Argo Workflow
+        run: |
+          kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
+          argo submit labs/lab09/workflows/ingest-documents.yaml -n staging --watch

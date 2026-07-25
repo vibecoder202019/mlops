@@ -1,0 +1,22 @@
+{
+  "model_name": "iris-random-forest",
+  "version": "1.0.0",
+  "trained_at": "2026-07-25T02:59:36.349550+00:00",
+  "algorithm": "RandomForestClassifier",
+  "features": [
+    "sepal_length",
+    "sepal_width",
+    "petal_length",
+    "petal_width"
+  ],
+  "target_classes": [
+    "setosa",
+    "versicolor",
+    "virginica"
+  ],
+  "metrics": {
+    "accuracy": 0.9
+  },
+  "train_samples": 120,
+  "test_samples": 30
+}

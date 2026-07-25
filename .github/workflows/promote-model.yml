@@ -1,0 +1,53 @@
+name: Promote Model to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: "MLflow model version number"
+        required: true
+        type: string
+      run_id:
+        description: "MLflow run ID"
+        required: true
+        type: string
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install mlflow boto3
+
+      - name: Promote model in MLflow Registry
+        env:
+          MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI }}
+        run: |
+          python scripts/promote_model.py \
+            --model-name housing-price-regressor \
+            --version ${{ inputs.model_version }} \
+            --stage Production
+
+      - name: Configure AWS & deploy production
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Deploy to production
+        run: |
+          helm upgrade --install housing-api ./labs/lab03/helm/housing-api \
+            --namespace production \
+            --set image.tag=${{ github.sha }} \
+            --wait
