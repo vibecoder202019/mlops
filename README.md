@@ -23,6 +23,7 @@ mlops/
 │   ├── lab09/                     # RAG platform infrastructure
 │   └── lab10/                     # Fine-tuning MLOps
 ├── .github/workflows/             # GitHub Actions CI/CD
+├── infra/ec2/                     # Terraform + scripts triển khai EC2
 └── scripts/                       # quality-gate, smoke-test, cost-check
 ```
 
@@ -110,6 +111,23 @@ kubectl apply -f gitops/argocd/projects/mlops-project.yaml
 kubectl apply -f gitops/argocd/applications/lab01-canary-staging.yaml
 ./scripts/test-argocd-canary.sh
 ```
+
+## Triển khai trên AWS EC2
+
+Deploy labs trên EC2 (control node + GPU node):
+
+- [AWS EC2 Deployment Guide](docs/AWS-EC2-LABS-DEPLOYMENT-GUIDE.md)
+- Terraform: `infra/ec2/terraform/`
+- Scripts: `infra/ec2/scripts/`
+
+```bash
+cd infra/ec2/terraform
+cp terraform.tfvars.example terraform.tfvars   # sửa IP + S3 bucket
+terraform init && terraform apply
+bash ~/mlops/infra/ec2/scripts/deploy-lab01-docker.sh
+```
+
+## Backstage — AI Platform Portal
 
 ```
 platform/backstage/

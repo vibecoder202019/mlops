@@ -9,6 +9,7 @@ nav:
   - Request Workflows: PLATFORM-REQUEST-WORKFLOWS.md
   - Istio Integration: ISTIO-INTEGRATION-GUIDE.md
   - ArgoCD Canary/Blue-Green: ARGOCD-CANARY-BLUEGREEN-GUIDE.md
+  - AWS EC2 Deployment: AWS-EC2-LABS-DEPLOYMENT-GUIDE.md
   - Labs:
       - Lab 1 - Iris Classifier: ../labs/lab01/README.md
       - Lab 3 - MLOps Pipeline: ../labs/lab03/README.md

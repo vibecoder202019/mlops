@@ -8,6 +8,7 @@ Chào mừng đến **MLOps AI Platform Labs**.
 2. Làm [Lab 1](../labs/lab01/README.md) — Train & Serve model
 3. Setup [CI/CD](MLOPS-LABS-CICD-GUIDE.md)
 4. Tích hợp [Backstage](BACKSTAGE-INTEGRATION-GUIDE.md)
+5. Deploy trên [AWS EC2](AWS-EC2-LABS-DEPLOYMENT-GUIDE.md)
 
 ## Platform components
 
