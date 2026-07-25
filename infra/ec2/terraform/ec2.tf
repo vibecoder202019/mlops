@@ -1,9 +1,11 @@
 resource "aws_instance" "control" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.control_instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.control.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = var.control_instance_type
+  key_name                    = var.key_name
+  subnet_id                   = var.subnet_id
+  associate_public_ip_address = true
+  vpc_security_group_ids      = [aws_security_group.control.id]
+  iam_instance_profile        = aws_iam_instance_profile.ec2.name
 
   root_block_device {
     volume_size = var.control_root_volume_gb
@@ -25,12 +27,14 @@ resource "aws_instance" "control" {
 }
 
 resource "aws_instance" "gpu" {
-  count                  = var.enable_gpu_node ? 1 : 0
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.gpu_instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.gpu[0].id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+  count                       = var.enable_gpu_node ? 1 : 0
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = var.gpu_instance_type
+  key_name                    = var.key_name
+  subnet_id                   = var.subnet_id
+  associate_public_ip_address = true
+  vpc_security_group_ids      = [aws_security_group.gpu[0].id]
+  iam_instance_profile        = aws_iam_instance_profile.ec2.name
 
   root_block_device {
     volume_size = var.gpu_root_volume_gb

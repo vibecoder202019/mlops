@@ -33,13 +33,14 @@ systemctl restart docker
 
 # AWS CLI
 curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/aws/install
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install -i /usr/local/aws-cli -b /usr/local/bin
 
 sudo -u ubuntu git clone "$REPO_URL" /home/ubuntu/mlops || true
 
 cat > /home/ubuntu/.mlops-env <<EOF
-export AWS_REGION=${AWS_REGION}
-export S3_BUCKET=${S3_BUCKET}
+export AWS_REGION=$${AWS_REGION}
+export S3_BUCKET=$${S3_BUCKET}
 EOF
 chown ubuntu:ubuntu /home/ubuntu/.mlops-env
 echo 'source ~/.mlops-env' >> /home/ubuntu/.bashrc

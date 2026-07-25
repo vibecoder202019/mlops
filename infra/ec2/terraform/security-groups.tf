@@ -1,7 +1,7 @@
 resource "aws_security_group" "control" {
   name        = "${local.name_prefix}-control-sg"
   description = "MLOps control node - SSH, HTTP, K3s, Istio"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = var.vpc_id
 
   ingress {
     description = "SSH"
@@ -57,7 +57,7 @@ resource "aws_security_group" "gpu" {
   count       = var.enable_gpu_node ? 1 : 0
   name        = "${local.name_prefix}-gpu-sg"
   description = "MLOps GPU node - SSH, vLLM, RAG API"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = var.vpc_id
 
   ingress {
     description = "SSH"
@@ -83,8 +83,4 @@ resource "aws_security_group" "gpu" {
   }
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-gpu-sg" })
-}
-
-data "aws_vpc" "default" {
-  default = true
 }

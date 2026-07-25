@@ -63,3 +63,13 @@ variable "gpu_root_volume_gb" {
   type    = number
   default = 100
 }
+
+variable "vpc_id" {
+  type        = string
+  description = "Existing VPC ID (required when no default VPC)"
+}
+
+variable "subnet_id" {
+  type        = string
+  description = "Public subnet ID for EC2 instances"
+}

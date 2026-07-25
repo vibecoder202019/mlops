@@ -21,7 +21,8 @@ usermod -aG docker ubuntu
 
 # AWS CLI v2
 curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/aws/install
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install -i /usr/local/aws-cli -b /usr/local/bin
 
 # kubectl
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -42,8 +43,8 @@ sudo -u ubuntu git clone "$REPO_URL" /home/ubuntu/mlops || true
 
 # Env file
 cat > /home/ubuntu/.mlops-env <<EOF
-export AWS_REGION=${AWS_REGION}
-export S3_BUCKET=${S3_BUCKET}
+export AWS_REGION=$${AWS_REGION}
+export S3_BUCKET=$${S3_BUCKET}
 export MLFLOW_TRACKING_URI=http://localhost:5000
 EOF
 chown ubuntu:ubuntu /home/ubuntu/.mlops-env
