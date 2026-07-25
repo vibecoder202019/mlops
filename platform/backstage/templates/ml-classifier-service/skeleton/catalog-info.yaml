@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  title: ${{ values.name | title }}
+  description: ${{ values.description }}
+  tags:
+    - ml
+    - classifier
+    - mlops
+  annotations:
+    github.com/project-slug: ${{ values.repoSlug }}
+    github.com/workflows: ci-lab01.yml
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:${{ values.owner }}
+  system: mlops-labs
+  domain: ai-platform

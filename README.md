@@ -78,9 +78,50 @@ Xem `docs/MLOPS-LABS-CICD-GUIDE.md` Section 2:
 | `deploy-rag.yml` | Lab 9 | push + manual |
 | `cost-guardrails.yml` | Lab 7 | push + cron daily |
 
+## Backstage — AI Platform Portal
+
+Tích hợp Backstage để biến labs thành Internal Developer Platform:
+
+- **Software Catalog** — 10 labs đăng ký như Components
+- **TechDocs** — docs labs render trong portal
+- **Scaffolder** — template tạo ML service mới
+- **Plugins** — K8s, GitHub Actions, links MLflow/Grafana
+
+Xem: [docs/BACKSTAGE-INTEGRATION-GUIDE.md](docs/BACKSTAGE-INTEGRATION-GUIDE.md)
+
+## Istio Service Mesh
+
+Luồng request + tích hợp Istio cho ML serving:
+
+- [Request Workflows](docs/PLATFORM-REQUEST-WORKFLOWS.md) — sơ đồ request từng lab
+- [Istio Integration](docs/ISTIO-INTEGRATION-GUIDE.md) — cài Istio, canary, test
+- Script test: `./scripts/test-istio-lab01.sh`
+
+## ArgoCD — Canary & Blue/Green (GitOps)
+
+Deploy progressive delivery qua ArgoCD + Argo Rollouts:
+
+- [ArgoCD Guide](docs/ARGOCD-CANARY-BLUEGREEN-GUIDE.md)
+- GitOps manifests: `gitops/`
+- Workflows: `argocd-canary-deploy.yml`, `argocd-bluegreen-deploy.yml`
+
+```bash
+kubectl apply -f gitops/argocd/projects/mlops-project.yaml
+kubectl apply -f gitops/argocd/applications/lab01-canary-staging.yaml
+./scripts/test-argocd-canary.sh
+```
+
+```
+platform/backstage/
+├── catalog/          # Domain, System, Labs, Resources, APIs
+├── templates/        # Scaffolder: ML service, MLOps pipeline, LLM
+└── app-config.snippet.yaml
+```
+
 ## Yêu cầu môi trường
 
 - Python 3.10+
 - Docker, kubectl, minikube/kind
 - AWS CLI (Lab 3+)
 - Helm, Terraform (Lab 5+)
+- Node 18+ (Backstage portal)

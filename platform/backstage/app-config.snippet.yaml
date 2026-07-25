@@ -1,0 +1,76 @@
+# Backstage app-config.yaml — SNIPPET
+# Paste các section này vào app-config.yaml của Backstage app
+
+app:
+  title: MLOps AI Platform
+  baseUrl: http://localhost:3000
+
+organization:
+  name: MLOps Platform
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+
+backend:
+  baseUrl: http://localhost:7007
+  cors:
+    origin: http://localhost:3000
+  reading:
+    allow:
+      - host: github.com
+      - host: raw.githubusercontent.com
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+  rules:
+    - allow: [Component, System, API, Resource, Location, Domain, Group, User, Template]
+  locations:
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/catalog/domain.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/catalog/system.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/catalog/org.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/catalog/labs.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/catalog/resources.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/catalog/apis.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/catalog-info.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/templates/ml-classifier-service/template.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/templates/mlops-pipeline/template.yaml
+    - type: url
+      target: https://github.com/vibecoder202019/mlops/blob/main/platform/backstage/templates/llm-serving-service/template.yaml
+
+techdocs:
+  builder: local
+  generator:
+    runIn: docker
+  publisher:
+    type: local
+
+auth:
+  environment: development
+  providers:
+    guest: {}
+
+scaffolder:
+  defaultAuthor:
+    name: MLOps Platform
+    email: mlops@example.com
+
+# Kubernetes plugin (uncomment khi có EKS)
+# kubernetes:
+#   clusterLocatorMethods:
+#     - type: config
+#       clusters:
+#         - name: mlops-lab-cluster
+#           url: https://YOUR_EKS_API
+#           authProvider: aws

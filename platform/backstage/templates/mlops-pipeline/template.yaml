@@ -1,0 +1,69 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: mlops-pipeline
+  title: MLOps Training Pipeline
+  description: Tạo MLOps pipeline mới (pattern Lab 3 — DVC + MLflow + CI/CD)
+  tags:
+    - mlops
+    - dvc
+    - mlflow
+    - lab-03
+spec:
+  owner: group:mlops-team
+  type: service
+  parameters:
+    - title: Pipeline Information
+      required:
+        - name
+        - owner
+      properties:
+        name:
+          title: Pipeline Name
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        owner:
+          title: Owner
+          type: string
+          default: mlops-team
+        minR2Score:
+          title: Minimum R2 Score (quality gate)
+          type: number
+          default: 0.75
+    - title: Repository
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+  steps:
+    - id: fetch
+      name: Fetch Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          owner: ${{ parameters.owner }}
+          minR2Score: ${{ parameters.minR2Score }}
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}

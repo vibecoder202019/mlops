@@ -1,0 +1,266 @@
+# Lab Components — đăng ký vào Backstage Software Catalog
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab01-iris-classifier
+  title: "Lab 1 — Iris Classifier"
+  description: Train & serve scikit-learn model với FastAPI, Docker, Kubernetes
+  tags:
+    - lab
+    - lab-01
+    - ml-serving
+    - scikit-learn
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: ci-lab01.yml
+    backstage.io/techdocs-ref: dir:../../labs/lab01
+    backstage.io/kubernetes-id: iris-classifier
+    backstage.io/kubernetes-namespace: dev
+    backstage.io/kubernetes-label-selector: app=iris-classifier
+  links:
+    - url: https://github.com/vibecoder202019/mlops/tree/main/labs/lab01
+      title: Source Code
+      icon: github
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  providesApis:
+    - iris-predict-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab02-gpu-basics
+  title: "Lab 2 — GPU & AI Workload"
+  description: Hugging Face pipeline, GPU benchmark, Ollama local LLM
+  tags:
+    - lab
+    - lab-02
+    - gpu
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: lab02-benchmark.yml
+  links:
+    - url: https://github.com/vibecoder202019/mlops/tree/main/labs/lab02
+      title: Source Code
+      icon: github
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab03-housing-pipeline
+  title: "Lab 3 — MLOps Pipeline"
+  description: End-to-end MLOps — DVC, MLflow, GitHub Actions, EKS deploy
+  tags:
+    - lab
+    - lab-03
+    - mlops
+    - dvc
+    - mlflow
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: mlops-lab03.yml
+    backstage.io/kubernetes-id: housing-api
+    backstage.io/kubernetes-namespace: staging
+  links:
+    - url: https://github.com/vibecoder202019/mlops/tree/main/labs/lab03
+      title: Source Code
+      icon: github
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  dependsOn:
+    - resource:s3-mlops-artifacts
+    - resource:mlflow-tracking
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab04-validation
+  title: "Lab 4 — Data & Model Validation"
+  description: Great Expectations, Evidently drift, quality gates
+  tags:
+    - lab
+    - lab-04
+    - validation
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab05-kserve-platform
+  title: "Lab 5 — KServe on EKS"
+  description: Model serving với KServe — canary, HPA, Prometheus
+  tags:
+    - lab
+    - lab-05
+    - kserve
+    - model-serving
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: deploy-kserve.yml
+    backstage.io/kubernetes-id: iris-sklearn
+    backstage.io/kubernetes-namespace: staging
+  links:
+    - url: https://kserve.github.io
+      title: KServe Docs
+      icon: docs
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  dependsOn:
+    - resource:eks-mlops-cluster
+    - resource:s3-mlops-artifacts
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab06-kubeflow-pipelines
+  title: "Lab 6 — Kubeflow Pipelines"
+  description: KFP training pipeline — compile, upload, trigger runs
+  tags:
+    - lab
+    - lab-06
+    - kubeflow
+    - pipeline
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: kfp-upload.yml
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  dependsOn:
+    - resource:eks-mlops-cluster
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab07-cost-optimization
+  title: "Lab 7 — Cost Optimization"
+  description: Spot GPU, scale-to-zero, S3 lifecycle, cost guardrails
+  tags:
+    - lab
+    - lab-07
+    - cost
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: cost-guardrails.yml
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab08-vllm-server
+  title: "Lab 8 — vLLM LLM Serving"
+  description: Self-hosted LLM với vLLM — OpenAI-compatible API
+  tags:
+    - lab
+    - lab-08
+    - llm
+    - vllm
+    - gpu
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: deploy-vllm.yml
+    backstage.io/kubernetes-id: vllm-server
+    backstage.io/kubernetes-namespace: staging
+    backstage.io/kubernetes-label-selector: app=vllm-server
+  links:
+    - url: https://docs.vllm.ai
+      title: vLLM Docs
+      icon: docs
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  providesApis:
+    - llm-completions-api
+  dependsOn:
+    - resource:eks-mlops-cluster
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab09-rag-platform
+  title: "Lab 9 — RAG Platform"
+  description: RAG infrastructure — Qdrant, embedding, ingestion, LLM
+  tags:
+    - lab
+    - lab-09
+    - rag
+    - vector-db
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: deploy-rag.yml
+    backstage.io/kubernetes-id: rag-platform
+    backstage.io/kubernetes-namespace: staging
+  links:
+    - url: https://github.com/vibecoder202019/mlops/tree/main/labs/lab09
+      title: Source Code
+      icon: github
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  dependsOn:
+    - component:lab08-vllm-server
+    - resource:s3-mlops-artifacts
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lab10-finetuning
+  title: "Lab 10 — Fine-tuning MLOps"
+  description: LoRA fine-tune, MLflow registry, A/B test, GPU training job
+  tags:
+    - lab
+    - lab-10
+    - fine-tuning
+    - lora
+  annotations:
+    github.com/project-slug: vibecoder202019/mlops
+    github.com/workflows: train-trigger.yml
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
+  dependsOn:
+    - resource:mlflow-tracking
+    - resource:eks-mlops-cluster

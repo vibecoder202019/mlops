@@ -1,0 +1,60 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: eks-mlops-cluster
+  title: EKS MLOps Cluster
+  description: Amazon EKS cluster cho ML serving và pipelines
+  tags:
+    - aws
+    - eks
+    - kubernetes
+  links:
+    - url: https://console.aws.amazon.com/eks/home
+      title: AWS EKS Console
+      icon: cloud
+spec:
+  type: cluster
+  owner: group:mlops-team
+  system: mlops-labs
+  dependencyOf:
+    - component:lab05-kserve-platform
+    - component:lab08-vllm-server
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: s3-mlops-artifacts
+  title: S3 MLOps Artifacts
+  description: S3 bucket cho DVC data, model artifacts, MLflow artifacts
+  tags:
+    - aws
+    - s3
+    - storage
+spec:
+  type: storage
+  owner: group:mlops-team
+  system: mlops-labs
+  dependencyOf:
+    - component:lab03-housing-pipeline
+    - component:lab05-kserve-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: mlflow-tracking
+  title: MLflow Tracking Server
+  description: Experiment tracking và model registry
+  tags:
+    - mlflow
+    - mlops
+  links:
+    - url: http://mlflow.staging.svc:5000
+      title: MLflow UI
+      icon: dashboard
+spec:
+  type: service
+  owner: group:mlops-team
+  system: mlops-labs
+  dependencyOf:
+    - component:lab03-housing-pipeline
+    - component:lab10-finetuning

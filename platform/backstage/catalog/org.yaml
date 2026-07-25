@@ -1,0 +1,23 @@
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: mlops-team
+  description: MLOps / AI Platform engineering team
+spec:
+  type: team
+  profile:
+    displayName: MLOps Team
+  children: []
+  members:
+    - vibecoder202019
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: vibecoder202019
+spec:
+  profile:
+    displayName: MLOps Engineer
+    email: mlops@example.com
+  memberOf:
+    - mlops-team

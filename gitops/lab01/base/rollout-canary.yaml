@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: iris-classifier
+  labels:
+    app: iris-classifier
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: iris-classifier
+  template:
+    metadata:
+      labels:
+        app: iris-classifier
+    spec:
+      containers:
+        - name: api
+          image: iris-classifier:1.0.0
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+  strategy:
+    canary:
+      canaryService: iris-classifier-canary
+      stableService: iris-classifier
+      trafficRouting:
+        istio:
+          virtualService:
+            name: iris-classifier
+            routes:
+              - primary
+          destinationRule:
+            name: iris-classifier
+            canarySubsetName: canary
+            stableSubsetName: stable
+      steps:
+        - setWeight: 10
+        - pause: { duration: 1m }
+        - analysis:
+            templates:
+              - templateName: iris-success-rate
+        - setWeight: 30
+        - pause: { duration: 1m }
+        - setWeight: 50
+        - pause: { duration: 1m }
+        - setWeight: 100

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris-classifier-v2
+  namespace: mlops
+  labels:
+    app: iris-classifier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iris-classifier
+      version: v2.0.0
+  template:
+    metadata:
+      labels:
+        app: iris-classifier
+        version: v2.0.0
+    spec:
+      containers:
+        - name: api
+          image: iris-classifier:2.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

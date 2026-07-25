@@ -1,0 +1,57 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: iris-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - iris.lab.local
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: iris-classifier
+spec:
+  hosts:
+    - iris.lab.local
+  gateways:
+    - iris-gateway
+  http:
+    - name: primary
+      match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: iris-classifier
+            port:
+              number: 8000
+            subset: stable
+          weight: 100
+        - destination:
+            host: iris-classifier
+            port:
+              number: 8000
+            subset: canary
+          weight: 0
+      timeout: 30s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: iris-classifier
+spec:
+  host: iris-classifier
+  subsets:
+    - name: stable
+      labels:
+        rollouts-pod-template-hash: stable
+    - name: canary
+      labels:
+        rollouts-pod-template-hash: canary

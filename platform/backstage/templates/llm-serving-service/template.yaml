@@ -1,0 +1,70 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: llm-serving-service
+  title: LLM Serving Service (vLLM)
+  description: Tạo LLM serving service mới (pattern Lab 8 — vLLM on EKS)
+  tags:
+    - llm
+    - vllm
+    - gpu
+    - lab-08
+spec:
+  owner: group:mlops-team
+  type: service
+  parameters:
+    - title: LLM Service
+      required:
+        - name
+        - modelName
+        - owner
+      properties:
+        name:
+          title: Service Name
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        modelName:
+          title: HuggingFace Model ID
+          type: string
+          default: meta-llama/Llama-3.2-1B-Instruct
+        owner:
+          title: Owner
+          type: string
+          default: mlops-team
+    - title: Repository
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+  steps:
+    - id: fetch
+      name: Fetch Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          modelName: ${{ parameters.modelName }}
+          owner: ${{ parameters.owner }}
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}

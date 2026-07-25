@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: mlops-labs
+  title: MLOps Labs Platform
+  description: Hệ thống labs MLOps — từ train/serve model đến LLM platform
+  tags:
+    - mlops
+    - kubernetes
+    - aws
+  links:
+    - url: https://github.com/vibecoder202019/mlops
+      title: Source Repository
+      icon: github
+    - url: https://github.com/vibecoder202019/mlops/actions
+      title: CI/CD
+      icon: dashboard
+spec:
+  owner: group:mlops-team
+  domain: ai-platform

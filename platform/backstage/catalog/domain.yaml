@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: ai-platform
+  title: AI Platform
+  description: Domain cho AI/ML services, MLOps pipelines và LLM infrastructure
+  tags:
+    - ai
+    - mlops
+    - llm
+spec:
+  owner: group:mlops-team

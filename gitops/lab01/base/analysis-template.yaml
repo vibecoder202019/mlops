@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: iris-success-rate
+spec:
+  metrics:
+    - name: success-rate
+      interval: 30s
+      count: 3
+      successCondition: result[0] >= 0.95
+      failureLimit: 2
+      provider:
+        job:
+          spec:
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: smoke-test
+                    image: curlimages/curl:latest
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        PASS=0
+                        TOTAL=10
+                        for i in $(seq 1 $TOTAL); do
+                          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                            http://iris-classifier.mlops.svc.cluster.local:8000/health)
+                          [ "$CODE" = "200" ] && PASS=$((PASS+1))
+                        done
+                        RATE=$(echo "scale=2; $PASS / $TOTAL" | bc)
+                        echo "success-rate=$RATE"
+                        echo "$RATE" > /dev/termination-log
+                        test $(echo "$RATE >= 0.95" | bc) -eq 1

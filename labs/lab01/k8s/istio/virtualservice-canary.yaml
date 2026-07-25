@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: iris-classifier-canary
+  namespace: mlops
+spec:
+  hosts:
+    - iris.lab.local
+  gateways:
+    - iris-gateway
+  http:
+    # Header-based A/B: x-test-group=beta → v2
+    - match:
+        - headers:
+            x-test-group:
+              exact: beta
+      route:
+        - destination:
+            host: iris-classifier
+            port:
+              number: 8000
+            subset: v2
+    # Default: canary weight 90/10
+    - route:
+        - destination:
+            host: iris-classifier
+            port:
+              number: 8000
+            subset: v1
+          weight: 90
+        - destination:
+            host: iris-classifier
+            port:
+              number: 8000
+            subset: v2
+          weight: 10
+      timeout: 30s

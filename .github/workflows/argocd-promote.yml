@@ -1,0 +1,43 @@
+name: ArgoCD Promote Rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: "Deployment strategy"
+        required: true
+        type: choice
+        options:
+          - canary
+          - bluegreen
+      namespace:
+        default: mlops
+        type: string
+
+env:
+  ROLLOUT_NAMESPACE: mlops
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+      - name: Install kubectl-argo-rollouts
+        run: |
+          curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+      - name: Promote rollout
+        env:
+          ROLLOUT: ${{ inputs.strategy == 'canary' && 'iris-classifier' || 'iris-classifier-bg' }}
+          NS: ${{ inputs.namespace }}
+        run: |
+          kubectl argo rollouts promote rollout/$ROLLOUT -n $NS
+          kubectl argo rollouts status rollout/$ROLLOUT -n $NS --timeout 10m

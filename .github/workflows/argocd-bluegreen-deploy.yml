@@ -1,0 +1,128 @@
+name: ArgoCD Blue/Green Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy"
+        required: true
+        type: string
+      auto_promote:
+        description: "Auto promote after preview analysis"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+env:
+  APP_DIR: labs/lab01
+  ECR_REPOSITORY: iris-classifier
+  GITOPS_OVERLAY: gitops/lab01/overlays/staging-bluegreen
+  ARGOCD_APP: lab01-iris-bluegreen-staging
+  ROLLOUT_NAME: iris-classifier-bg
+  ROLLOUT_NAMESPACE: mlops
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - working-directory: ${{ env.APP_DIR }}
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          pip install -r requirements.txt && python train.py
+          docker build -t $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG .
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:$TAG
+
+  update-gitops:
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update image tag in overlay
+        env:
+          TAG: ${{ inputs.image_tag }}
+          ECR_REGISTRY: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+        run: |
+          cd ${{ env.GITOPS_OVERLAY }}
+          curl -sL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz | tar xz
+          ./kustomize edit set image iris-classifier=${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}:${TAG}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add kustomization.yaml
+          git commit -m "deploy(bluegreen): iris-classifier ${TAG}" || true
+          git push
+
+  argocd-sync:
+    needs: update-gitops
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync via ArgoCD CLI
+        if: vars.ARGOCD_SERVER != ''
+        env:
+          ARGOCD_SERVER: ${{ vars.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd && sudo mv argocd /usr/local/bin/
+          argocd app sync ${{ env.ARGOCD_APP }} --grpc-web
+          argocd app wait ${{ env.ARGOCD_APP }} --health --timeout 600
+
+  test-preview:
+    needs: argocd-sync
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+      - name: Smoke test preview service (green)
+        run: |
+          kubectl wait --for=condition=available rollout/${{ env.ROLLOUT_NAME }} \
+            -n ${{ env.ROLLOUT_NAMESPACE }} --timeout=600s || true
+          kubectl run bg-preview-test-$(date +%s) -n ${{ env.ROLLOUT_NAMESPACE }} \
+            --image=curlimages/curl --restart=Never --rm -i \
+            --command -- curl -sf http://iris-classifier-preview:8000/health
+
+  promote:
+    needs: test-preview
+    if: inputs.auto_promote == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.EKS_CLUSTER_NAME }}
+      - run: |
+          curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+          kubectl argo rollouts promote rollout/${{ env.ROLLOUT_NAME }} -n ${{ env.ROLLOUT_NAMESPACE }}
+          kubectl argo rollouts status rollout/${{ env.ROLLOUT_NAME }} -n ${{ env.ROLLOUT_NAMESPACE }} --timeout 10m

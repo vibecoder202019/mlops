@@ -1,0 +1,25 @@
+site_name: MLOps AI Platform
+site_description: Lộ trình học và triển khai MLOps / AI Platform Engineer
+
+nav:
+  - Home: index.md
+  - Lộ trình Labs: MLOPS-AI-PLATFORM-LABS-GUIDE.md
+  - CI/CD Guide: MLOPS-LABS-CICD-GUIDE.md
+  - Backstage Integration: BACKSTAGE-INTEGRATION-GUIDE.md
+  - Request Workflows: PLATFORM-REQUEST-WORKFLOWS.md
+  - Istio Integration: ISTIO-INTEGRATION-GUIDE.md
+  - ArgoCD Canary/Blue-Green: ARGOCD-CANARY-BLUEGREEN-GUIDE.md
+  - Labs:
+      - Lab 1 - Iris Classifier: ../labs/lab01/README.md
+      - Lab 3 - MLOps Pipeline: ../labs/lab03/README.md
+      - Lab 5 - KServe: ../labs/lab05/README.md
+      - Lab 8 - vLLM: ../labs/lab08/README.md
+
+plugins:
+  - techdocs-core
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true

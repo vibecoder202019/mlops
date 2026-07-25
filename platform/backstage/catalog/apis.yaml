@@ -1,0 +1,88 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: iris-predict-api
+  title: Iris Predict API
+  description: REST API dự đoán loài hoa Iris (Lab 1)
+  tags:
+    - rest
+    - ml
+    - lab-01
+  links:
+    - url: https://github.com/vibecoder202019/mlops/blob/main/labs/lab01/serve.py
+      title: OpenAPI Source
+      icon: docs
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Iris Classifier API
+      version: 1.0.0
+    paths:
+      /health:
+        get:
+          summary: Health check
+          responses:
+            "200":
+              description: OK
+      /predict:
+        post:
+          summary: Predict iris species
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    sepal_length: { type: number }
+                    sepal_width: { type: number }
+                    petal_length: { type: number }
+                    petal_width: { type: number }
+          responses:
+            "200":
+              description: Prediction result
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: llm-completions-api
+  title: LLM Completions API (OpenAI-compatible)
+  description: vLLM OpenAI-compatible API (Lab 8)
+  tags:
+    - llm
+    - openai-compatible
+    - lab-08
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: group:mlops-team
+  system: mlops-labs
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: vLLM OpenAI API
+      version: 1.0.0
+    paths:
+      /v1/completions:
+        post:
+          summary: Text completion
+          responses:
+            "200":
+              description: Completion result
+      /v1/chat/completions:
+        post:
+          summary: Chat completion
+          responses:
+            "200":
+              description: Chat result
+      /v1/models:
+        get:
+          summary: List models
+          responses:
+            "200":
+              description: Model list

@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mlops
+
+resources:
+  - service.yaml
+  - service-canary.yaml
+  - analysis-template.yaml
+  - rollout-canary.yaml
+  - istio/routing.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: mlops-labs
+  app.kubernetes.io/component: lab01-iris
+
+images:
+  - name: iris-classifier
+    newName: iris-classifier
+    newTag: "1.0.0"

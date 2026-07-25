@@ -31,6 +31,42 @@ kubectl apply -f k8s/
 curl $(minikube ip):30080/health
 ```
 
+## Istio Service Mesh
+
+Xem: [docs/ISTIO-INTEGRATION-GUIDE.md](../../docs/ISTIO-INTEGRATION-GUIDE.md)
+
+```bash
+# Cài Istio (minikube)
+istioctl install --set profile=demo -y
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -n mlops -f k8s/deployment.yaml -f k8s/service.yaml
+kubectl apply -n mlops -f k8s/istio/
+
+# /etc/hosts
+echo "$(minikube ip) iris.lab.local" | sudo tee -a /etc/hosts
+
+# Test qua Istio Gateway
+../../scripts/test-istio-lab01.sh
+```
+
+Manifests Istio: `k8s/istio/` (Gateway, VirtualService, DestinationRule, Canary, mTLS)
+
+## ArgoCD GitOps (Canary / Blue-Green)
+
+```bash
+kubectl apply -f gitops/argocd/applications/lab01-canary-staging.yaml
+argocd app sync lab01-iris-canary-staging
+kubectl argo rollouts status rollout/iris-classifier -n mlops --watch
+```
+
+Xem: [ARGOCD-CANARY-BLUEGREEN-GUIDE.md](../../docs/ARGOCD-CANARY-BLUEGREEN-GUIDE.md)
+
 ## CI/CD
 
-Workflow: `.github/workflows/ci-lab01.yml`
+| Workflow | Mục đích |
+|----------|----------|
+| `ci-lab01.yml` | Test + build image |
+| `argocd-canary-deploy.yml` | GitOps canary deploy |
+| `argocd-bluegreen-deploy.yml` | Blue/green (manual) |
+| `argocd-promote.yml` | Promote rollout |
+| `argocd-rollback.yml` | Rollback rollout |

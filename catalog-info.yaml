@@ -1,0 +1,26 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mlops-labs-docs
+  title: MLOps Labs Documentation
+  description: Tài liệu và hướng dẫn thực hành MLOps / AI Platform Engineer
+  tags:
+    - documentation
+    - mlops
+    - ai-platform
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: vibecoder202019/mlops
+  links:
+    - url: https://github.com/vibecoder202019/mlops
+      title: GitHub Repository
+      icon: github
+    - url: https://github.com/vibecoder202019/mlops/actions
+      title: CI/CD Pipelines
+      icon: github
+spec:
+  type: documentation
+  lifecycle: production
+  owner: group:mlops-team
+  system: mlops-labs
+  domain: ai-platform
