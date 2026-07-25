@@ -22,6 +22,16 @@ docker build -t iris-classifier:1.0.0 .
 docker run -d -p 8000:8000 iris-classifier:1.0.0
 ```
 
+## Kubernetes (Docker Desktop — macOS, khuyến nghị)
+
+```bash
+# Bật K8s: Docker Desktop → Settings → Kubernetes → Enable
+bash ../../infra/macos/scripts/deploy-lab01-k8s.sh
+curl http://localhost:30080/health
+```
+
+Xem: [MACOS-DOCKER-DESKTOP-K8S-GUIDE.md](../../docs/MACOS-DOCKER-DESKTOP-K8S-GUIDE.md)
+
 ## Kubernetes (minikube)
 
 ```bash

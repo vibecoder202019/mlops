@@ -24,6 +24,7 @@ mlops/
 │   └── lab10/                     # Fine-tuning MLOps
 ├── .github/workflows/             # GitHub Actions CI/CD
 ├── infra/ec2/                     # Terraform + scripts triển khai EC2
+├── infra/macos/                   # Scripts Docker Desktop K8s (macOS)
 └── scripts/                       # quality-gate, smoke-test, cost-check
 ```
 
@@ -125,6 +126,20 @@ cd infra/ec2/terraform
 cp terraform.tfvars.example terraform.tfvars   # sửa IP + S3 bucket
 terraform init && terraform apply
 bash ~/mlops/infra/ec2/scripts/deploy-lab01-docker.sh
+```
+
+## Thực hành trên macOS (Docker Desktop Kubernetes)
+
+Không cần minikube — dùng K8s tích hợp sẵn trong Docker Desktop:
+
+- [macOS Docker Desktop K8s Guide](docs/MACOS-DOCKER-DESKTOP-K8S-GUIDE.md)
+- Scripts: `infra/macos/scripts/`
+
+```bash
+# Docker Desktop → Settings → Kubernetes → Enable
+bash infra/macos/scripts/setup-docker-desktop.sh
+bash infra/macos/scripts/deploy-lab01-k8s.sh
+curl http://localhost:30080/health
 ```
 
 ## Backstage — AI Platform Portal
