@@ -1,0 +1,8 @@
+# Namespace riêng cho MinIO — tách biệt resource với AWX và app khác
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minio
+  labels:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/part-of: k8s-awx-minio-guide

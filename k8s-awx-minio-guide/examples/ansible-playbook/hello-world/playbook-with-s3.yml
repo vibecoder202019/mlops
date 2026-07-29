@@ -1,0 +1,49 @@
+---
+# Playbook nâng cao — upload kết quả job lên MinIO
+# Yêu cầu: AWX Execution Environment có cài mc hoặc boto3
+# Dùng sau khi đã tích hợp MinIO (xem docs/05)
+
+- name: Hello World + Upload artifact lên MinIO
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+
+  vars:
+    # Endpoint MinIO nội bộ cluster — AWX task pod gọi trực tiếp
+    minio_endpoint: "http://minio.minio.svc.cluster.local:9000"
+    minio_bucket: "awx-artifacts"
+
+  tasks:
+    - name: In thông báo
+      debug:
+        msg: "Chạy job và upload kết quả lên MinIO"
+
+    - name: Tạo file kết quả
+      copy:
+        content: |
+          Job ID   : {{ awx_job_id | default('manual-run') }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          Host     : {{ ansible_hostname }}
+          OS       : {{ ansible_distribution }} {{ ansible_distribution_version }}
+        dest: /tmp/awx-artifact.txt
+        mode: '0644'
+
+    - name: Upload artifact lên MinIO bằng mc
+      shell: |
+        # mc alias set — cấu hình kết nối tới MinIO server
+        mc alias set awxminio {{ minio_endpoint }} \
+          "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
+
+        # mc cp — copy file local lên bucket
+        mc cp /tmp/awx-artifact.txt \
+          "awxminio/{{ minio_bucket }}/job-{{ awx_job_id | default('manual') }}.txt"
+
+        echo "Upload thành công!"
+      environment:
+        MINIO_ACCESS_KEY: "{{ lookup('env', 'MINIO_ACCESS_KEY') | default('minioadmin', true) }}"
+        MINIO_SECRET_KEY: "{{ lookup('env', 'MINIO_SECRET_KEY') | default('minioadmin123', true) }}"
+      changed_when: true
+
+    - name: Xác nhận upload
+      debug:
+        msg: "Artifact đã lưu tại s3://{{ minio_bucket }}/job-{{ awx_job_id | default('manual') }}.txt"

@@ -1,0 +1,17 @@
+# PVC — yêu cầu disk 10Gi để lưu object data
+# Data sẽ tồn tại kể cả khi pod restart (khác với emptyDir)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: minio
+  labels:
+    app: minio
+spec:
+  accessModes:
+    # ReadWriteOnce — volume gắn vào 1 node tại 1 thời điểm (đủ cho single-node MinIO lab)
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName bỏ trống → dùng StorageClass mặc định của cluster (hostpath trên Docker Desktop)

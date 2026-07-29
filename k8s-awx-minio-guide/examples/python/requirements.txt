@@ -1,0 +1,6 @@
+# Thư viện Python cho AWX API client và script demo
+# Cài: pip install -r requirements.txt
+
+requests>=2.31.0      # HTTP client — gọi AWX REST API
+urllib3>=2.0.0        # Dependency của requests
+boto3>=1.34.0         # AWS SDK — tương thích MinIO S3 API (tuỳ chọn)

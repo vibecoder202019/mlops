@@ -1,0 +1,23 @@
+# Execution Environment — image chạy job AWX với Python packages tuỳ chỉnh
+# Build: ansible-builder build -f execution-environment.yml -t my-awx-ee:latest
+# Docs: https://ansible.readthedocs.io/projects/builder/
+
+version: 3
+
+images:
+  base_image:
+    # EE mặc định của AWX — đã có Ansible + Python
+    name: quay.io/ansible/awx-ee:latest
+
+dependencies:
+  # Package Python cài vào EE
+  python:
+    - requests>=2.31.0   # HTTP client
+    - boto3>=1.34.0      # MinIO S3 upload
+  # Package system (tuỳ chọn)
+  galaxy: []
+
+additional_build_steps:
+  append_final:
+    # RUN trong Dockerfile khi build EE
+    - RUN pip3 install --no-cache-dir requests boto3

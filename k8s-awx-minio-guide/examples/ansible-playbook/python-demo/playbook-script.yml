@@ -1,0 +1,36 @@
+---
+# Playbook 1 — Chạy Python script qua Ansible script module
+# Job Template AWX: playbook-script.yml
+
+- name: Python Script Demo trên AWX
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+
+  tasks:
+    - name: Chạy process_data.py
+      # script module — copy script lên host và execute
+      # Đường dẫn relative từ thư mục project AWX sync
+      script: ../../python/scripts/process_data.py --name "{{ user_name | default('AWX Học viên') }}"
+      register: py_output
+
+    - name: Parse JSON output từ Python
+      set_fact:
+        # from_json filter — parse stdout string thành dict
+        py_result: "{{ py_output.stdout | from_json }}"
+
+    - name: Hiển thị kết quả Python
+      debug:
+        msg:
+          - "Message  : {{ py_result.message }}"
+          - "Timestamp: {{ py_result.timestamp }}"
+          - "Python   : {{ py_result.python_version }}"
+          - "Hostname : {{ py_result.hostname }}"
+
+    - name: Chạy Python inline (command module)
+      command: python3 -c "print('2 + 2 =', 2 + 2)"
+      register: inline_py
+
+    - name: Kết quả inline
+      debug:
+        msg: "{{ inline_py.stdout }}"

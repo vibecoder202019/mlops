@@ -1,0 +1,25 @@
+# Ingress cho AWX Web UI
+# Yêu cầu: NGINX Ingress Controller + awx.local trong /etc/hosts
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: awx
+  namespace: awx
+  annotations:
+    # AWX dùng WebSocket — cần annotation này cho real-time job output
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: awx.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                # Service name do AWX Operator tạo — thường là awx-service
+                name: awx-service
+                port:
+                  number: 80

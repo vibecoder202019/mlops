@@ -1,0 +1,52 @@
+# AWX Custom Resource — Operator sẽ đọc file này và tự tạo toàn bộ AWX stack
+# Bao gồm: PostgreSQL, Redis, awx-web, awx-task pods
+apiVersion: awx.ansible.com/v1beta1
+kind: AWX
+metadata:
+  name: awx
+  namespace: awx
+  labels:
+    app.kubernetes.io/name: awx
+spec:
+  # service_type ClusterIP — chỉ truy cập trong cluster, expose qua Ingress hoặc port-forward
+  service_type: ClusterIP
+
+  # ingress_type none — tự quản lý Ingress qua awx/ingress.yaml
+  ingress_type: none
+
+  # Hostname dùng khi truy cập AWX
+  hostname: awx.local
+
+  # Username admin mặc định (password được Operator tạo tự động trong Secret)
+  admin_user: admin
+
+  # admin_password_secret — bỏ trống để Operator tự generate password
+  # Xem password: kubectl get secret awx-admin-password -n awx
+
+  # Giới hạn resource cho web pod — tránh OOM trên máy yếu
+  web_resource_requirements:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  # Giới hạn resource cho task pod (chạy Ansible jobs)
+  task_resource_requirements:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  # PostgreSQL storage — AWX lưu toàn bộ cấu hình vào DB này
+  postgres_storage_requirements:
+    requests:
+      storage: 8Gi
+  # postgres_storage_class: "" — dùng StorageClass mặc định
+
+  # Số replica task node — 1 đủ cho lab
+  replicas: 1
+
+  # Cho phép xóa instance khi delete CR (cẩn thận khi production)
+  garbage_collect_secrets: false

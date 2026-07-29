@@ -1,0 +1,8 @@
+# Namespace riêng cho AWX Operator và AWX instance
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: awx
+  labels:
+    app.kubernetes.io/name: awx
+    app.kubernetes.io/part-of: k8s-awx-minio-guide

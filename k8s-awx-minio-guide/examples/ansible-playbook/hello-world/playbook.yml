@@ -1,0 +1,42 @@
+---
+# Playbook mẫu cho AWX — Hello World
+# Mục đích: Kiểm tra AWX chạy playbook Ansible thành công
+# Chạy local: ansible-playbook -i inventory.ini playbook.yml
+# Chạy trên AWX: tạo Job Template trỏ tới file này
+
+- name: Hello World — Kiểm tra AWX hoạt động
+  # hosts — nhóm máy trong inventory sẽ chạy playbook
+  hosts: localhost
+  # connection local — chạy task trên chính máy AWX task pod (không SSH)
+  connection: local
+  gather_facts: yes  # Thu thập thông tin hệ thống (OS, IP, memory...)
+
+  tasks:
+    - name: In thông báo chào mừng
+      # debug module — in ra màn hình (dùng để test)
+      debug:
+        msg: "Xin chào! AWX đang chạy playbook thành công 🎉"
+
+    - name: Hiển thị thông tin hệ thống
+      debug:
+        msg:
+          - "Hostname : {{ ansible_hostname }}"
+          - "OS       : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Python   : {{ ansible_python_version }}"
+          - "Thời gian: {{ ansible_date_time.iso8601 }}"
+
+    - name: Tạo file kết quả tạm
+      # copy module — tạo file với nội dung chỉ định
+      copy:
+        content: |
+          AWX Job completed successfully
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          Host: {{ ansible_hostname }}
+        dest: /tmp/awx-job-result.txt
+        mode: '0644'
+      # register — lưu kết quả task vào biến để dùng ở task sau
+      register: result_file
+
+    - name: Xác nhận file đã tạo
+      debug:
+        msg: "File kết quả: {{ result_file.dest }}"

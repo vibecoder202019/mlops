@@ -8,6 +8,8 @@ Lộ trình thực hành MLOps / AI Platform Engineer trên AWS + Kubernetes.
 
 ```
 mlops/
+├── learn-python-ai/               # 🆕 Học Python → ML → FastAPI (tự học)
+├── k8s-awx-minio-guide/           # 🆕 Hướng dẫn AWX + MinIO trên Kubernetes (người mới)
 ├── docs/                          # Tài liệu hướng dẫn
 │   ├── MLOPS-AI-PLATFORM-LABS-GUIDE.md   # Kiến thức + 10 labs
 │   └── MLOPS-LABS-CICD-GUIDE.md          # CI/CD cho tất cả labs
@@ -29,6 +31,20 @@ mlops/
 ```
 
 ## Bắt đầu nhanh
+
+### 0. Mới học Python / ML?
+
+Nếu bạn chưa vững Python, Data Science, hoặc FastAPI, bắt đầu tại:
+
+**GitHub:** [vibecoder202019/python-all](https://github.com/vibecoder202019/python-all)
+
+```bash
+git clone git@github.com:vibecoder202019/python-all.git
+cd python-all
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+open README.md   # Lộ trình 10 module, ~3-4 tháng
+```
 
 ### 1. Đọc tài liệu
 

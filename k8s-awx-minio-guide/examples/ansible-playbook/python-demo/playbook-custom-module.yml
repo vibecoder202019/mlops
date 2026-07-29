@@ -1,0 +1,31 @@
+---
+# Playbook 2 — Dùng custom Python module (library/hello_python.py)
+
+- name: Custom Python Module Demo
+  hosts: localhost
+  connection: local
+
+  tasks:
+    - name: Tạo thư mục library
+      file:
+        path: /tmp/library
+        state: directory
+
+    - name: Copy custom module vào thư mục library
+      copy:
+        src: ../../python/library/hello_python.py
+        dest: /tmp/library/hello_python.py
+        mode: '0755'
+
+    - name: Gọi custom module hello_python
+      hello_python:
+        name: "{{ user_name | default('DevOps') }}"
+        uppercase: false
+      register: greeting
+      environment:
+        # ANSIBLE_LIBRARY — chỉ định nơi Ansible tìm custom module
+        ANSIBLE_LIBRARY: /tmp/library
+
+    - name: Hiển thị kết quả custom module
+      debug:
+        var: greeting
