@@ -38,3 +38,7 @@ output "next_steps" {
     5. Docs: docs/AWS-EC2-LABS-DEPLOYMENT-GUIDE.md
   EOT
 }
+
+output "aws_region_output" {
+  value = var.aws_region
+}

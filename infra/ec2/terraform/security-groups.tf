@@ -4,6 +4,20 @@ resource "aws_security_group" "control" {
   vpc_id      = var.vpc_id
 
   ingress {
+    description = "Semaphore SSH"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+  ingress {
+    description = "Terrakube HTTP"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+  ingress {
     description = "SSH"
     from_port   = 22
     to_port     = 22
@@ -47,6 +61,14 @@ resource "aws_security_group" "control" {
     description = "MLflow (restrict in production)"
     from_port   = 5000
     to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
+  ingress {
+    description = "Ollama API"
+    from_port   = 11434
+    to_port     = 11434
     protocol    = "tcp"
     cidr_blocks = [var.allowed_ssh_cidr]
   }
